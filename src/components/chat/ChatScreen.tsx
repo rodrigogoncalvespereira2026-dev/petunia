@@ -11,6 +11,7 @@ import { avatarService } from '../../services/avatar';
 import { useMemoryCommands } from '../../hooks/useMemoryCommands';
 import { useToolCommands } from '../../hooks/useToolCommands';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { InstallButton } from '../pwa/InstallButton';
 import { Message } from '../../types';
 import { Colors, Spacing, FontSizes } from '../../constants';
 
@@ -137,12 +138,15 @@ export function ChatScreen() {
           <Text style={styles.headerTitle}>Petúnia</Text>
           <Text style={styles.headerSubtitle}>A tua companheira virtual</Text>
         </View>
-        <TouchableOpacity
-          style={styles.voiceModeButton}
-          onPress={() => setShowVoiceMode(true)}
-        >
-          <Ionicons name="mic" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <InstallButton />
+          <TouchableOpacity
+            style={styles.voiceModeButton}
+            onPress={() => setShowVoiceMode(true)}
+          >
+            <Ionicons name="mic" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {error && (
@@ -208,6 +212,11 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
     color: '#FFFFFFCC',
     marginTop: Spacing.xs,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   voiceModeButton: {
     padding: Spacing.sm,

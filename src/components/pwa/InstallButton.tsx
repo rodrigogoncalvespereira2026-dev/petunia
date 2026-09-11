@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, Text, Platform, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, Text, Platform, View, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants';
 
@@ -11,7 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 export function InstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [showBanner, setShowBanner] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -19,14 +19,12 @@ export function InstallButton() {
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setShowBanner(true);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
     window.addEventListener('appinstalled', () => {
       setIsInstalled(true);
-      setShowBanner(false);
     });
 
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -39,81 +37,97 @@ export function InstallButton() {
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setShowBanner(false);
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      setDeferredPrompt(null);
+    } else {
+      setShowModal(true);
     }
-    setDeferredPrompt(null);
   };
 
-  const handleDismiss = () => {
-    setShowBanner(false);
-    sessionStorage.setItem('petunia-install-dismissed', 'true');
-  };
-
-  if (Platform.OS !== 'web' || isInstalled || !showBanner) return null;
-
-  if (sessionStorage.getItem('petunia-install-dismissed') === 'true') return null;
+  if (Platform.OS !== 'web' || isInstalled) return null;
 
   return (
-    <View style={styles.banner}>
-      <View style={styles.bannerContent}>
-        <Ionicons name="phone-portrait-outline" size={20} color="#FFFFFF" />
-        <Text style={styles.bannerText}>Instalar Petúnia como app</Text>
-      </View>
-      <View style={styles.bannerActions}>
-        <TouchableOpacity style={styles.installButton} onPress={handleInstall}>
-          <Text style={styles.installButtonText}>Instalar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.dismissButton} onPress={handleDismiss}>
-          <Ionicons name="close" size={18} color="rgba(255,255,255,0.7)" />
-        </TouchableOpacity>
-      </View>
-    </View>
+    <>
+      <TouchableOpacity style={styles.iconButton} onPress={handleInstall}>
+        <Ionicons name="download-outline" size={20} color="#FFFFFF" />
+      </TouchableOpacity>
+
+      <Modal visible={showModal} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            <Ionicons name="phone-portrait-outline" size={40} color={Colors.primary} />
+            <Text style={styles.modalTitle}>Instalar Petúnia</Text>
+            <Text style={styles.modalText}>
+              Para instalar como app no telemóvel:
+            </Text>
+            <Text style={styles.modalStep}>1. Toca no botão partilhar (□↑)</Text>
+            <Text style={styles.modalStep}>2. Seleciona "Adicionar ao ecrã principal"</Text>
+            <Text style={styles.modalStep}>3. Confirma com "Adicionar"</Text>
+            <Text style={[styles.modalText, { marginTop: 12 }]}>No computador:</Text>
+            <Text style={styles.modalStep}>1. Clica no ícone de instalar na barra de endereço</Text>
+            <Text style={styles.modalStep}>2. Ou usa os 3 pontos do menu → "Instalar Petúnia"</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={() => setShowModal(false)}>
+              <Text style={styles.closeButtonText}>Entendido</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
-    backgroundColor: 'rgba(233, 30, 99, 0.95)',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+  iconButton: {
+    padding: Spacing.sm,
   },
-  bannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
+  overlay: {
     flex: 1,
-  },
-  bannerText: {
-    color: '#FFFFFF',
-    fontSize: FontSizes.sm,
-    fontWeight: '500',
-  },
-  bannerActions: {
-    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.sm,
   },
-  installButton: {
+  modal: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    margin: Spacing.lg,
+    alignItems: 'center',
+    maxWidth: 360,
+    width: '100%',
+  },
+  modalTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: '700',
+    color: Colors.text,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  modalText: {
+    fontSize: FontSizes.md,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+  modalStep: {
+    fontSize: FontSizes.sm,
+    color: Colors.text,
+    textAlign: 'left',
+    alignSelf: 'flex-start',
+    marginLeft: Spacing.lg,
+    marginVertical: 2,
+  },
+  closeButton: {
+    marginTop: Spacing.lg,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.sm,
   },
-  installButtonText: {
-    color: Colors.primary,
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-  },
-  dismissButton: {
-    padding: Spacing.xs,
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: FontSizes.md,
+    fontWeight: '600',
   },
 });
