@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Message } from '../../types';
 import { voiceService } from '../../services/voice';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants';
 
 interface ChatBubbleProps {
@@ -12,6 +13,7 @@ interface ChatBubbleProps {
 export function ChatBubble({ message }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const { settings } = useSettingsStore();
 
   const handleSpeak = async () => {
     if (isSpeaking) {
@@ -19,7 +21,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       setIsSpeaking(false);
     } else {
       setIsSpeaking(true);
-      await voiceService.speak(message.content);
+      await voiceService.speak(message.content, { speed: settings.voiceSpeed });
       setIsSpeaking(false);
     }
   };

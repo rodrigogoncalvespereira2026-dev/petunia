@@ -10,6 +10,7 @@ import { voiceService } from '../../services/voice';
 import { avatarService } from '../../services/avatar';
 import { useMemoryCommands } from '../../hooks/useMemoryCommands';
 import { useToolCommands } from '../../hooks/useToolCommands';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { Message } from '../../types';
 import { Colors, Spacing, FontSizes } from '../../constants';
 
@@ -27,6 +28,7 @@ export function ChatScreen() {
 
   const { processMessage: processMemory } = useMemoryCommands();
   const { processMessage: processTool } = useToolCommands();
+  const { settings } = useSettingsStore();
   const flatListRef = useRef<FlatList>(null);
   const [showVoiceMode, setShowVoiceMode] = useState(false);
 
@@ -75,7 +77,7 @@ export function ChatScreen() {
       avatarService.setExpression('happy');
       avatarService.setState('speaking');
       setLoading(false);
-      voiceService.speak(memoryResult.response);
+      voiceService.speak(memoryResult.response, { speed: settings.voiceSpeed });
       return;
     }
 
@@ -93,7 +95,7 @@ export function ChatScreen() {
       avatarService.setExpression('thinking');
       avatarService.setState('speaking');
       setLoading(false);
-      voiceService.speak(toolResult.response);
+      voiceService.speak(toolResult.response, { speed: settings.voiceSpeed });
       return;
     }
 
@@ -119,7 +121,7 @@ export function ChatScreen() {
     setLoading(false);
 
     if (response.speak) {
-      voiceService.speak(response.text);
+      voiceService.speak(response.text, { speed: settings.voiceSpeed });
     }
   };
 

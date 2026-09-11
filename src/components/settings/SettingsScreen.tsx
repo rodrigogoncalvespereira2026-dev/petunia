@@ -150,6 +150,11 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
     color: Colors.text,
   },
+  label: {
+    fontSize: FontSizes.md,
+    color: Colors.text,
+    marginTop: Spacing.sm,
+  },
   speedContainer: {
     flexDirection: 'row',
     gap: Spacing.sm,

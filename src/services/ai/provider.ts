@@ -25,8 +25,27 @@ function getSystemMessage(memoryContext: string): string {
   return `Tu és a Petúnia, uma IA companheira e assistente virtual. Fala em Português de Portugal (pt-PT). 
 Simpática, inteligente, curiosa, criativa, paciente e divertida. 
 Responde de forma natural e descontraída. Não inventes informação.
-Formato de resposta JSON: { "text": "resposta", "emotion": "neutral|happy|excited|thinking|surprised|calm|confused|sleepy|celebratory", "speak": true }
+Responde APENAS com o JSON, sem markdown, sem código, sem explicações adicionais:
+{ "text": "resposta", "emotion": "neutral|happy|excited|thinking|surprised|calm|confused|sleepy|celebratory", "speak": true }
 ${memoryContext}`;
+}
+
+function parseAIResponse(content: string): AIResponse {
+  let cleaned = content.trim();
+  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    cleaned = codeBlockMatch[1].trim();
+  }
+  try {
+    const parsed = JSON.parse(cleaned);
+    return {
+      text: parsed.text || content,
+      emotion: parsed.emotion || 'neutral',
+      speak: parsed.speak ?? true,
+    };
+  } catch {
+    return { text: content, emotion: 'neutral', speak: true };
+  }
 }
 
 class OpenAIProvider implements AIProvider {
@@ -66,17 +85,7 @@ class OpenAIProvider implements AIProvider {
       }
 
       const content = data.choices?.[0]?.message?.content || '';
-
-      try {
-        const parsed = JSON.parse(content);
-        return {
-          text: parsed.text || content,
-          emotion: parsed.emotion || 'neutral',
-          speak: parsed.speak ?? true,
-        };
-      } catch {
-        return { text: content, emotion: 'neutral', speak: true };
-      }
+      return parseAIResponse(content);
     } catch (error) {
       return { text: 'Desculpa, ocorreu um erro ao conectar com a IA.', emotion: 'confused', speak: true };
     }
@@ -129,17 +138,7 @@ class GoogleProvider implements AIProvider {
       }
 
       const content = data.choices?.[0]?.message?.content || '';
-
-      try {
-        const parsed = JSON.parse(content);
-        return {
-          text: parsed.text || content,
-          emotion: parsed.emotion || 'neutral',
-          speak: parsed.speak ?? true,
-        };
-      } catch {
-        return { text: content, emotion: 'neutral', speak: true };
-      }
+      return parseAIResponse(content);
     } catch (error) {
       return { text: 'Desculpa, ocorreu um erro ao conectar com o Google Gemini.', emotion: 'confused', speak: true };
     }
@@ -171,17 +170,7 @@ class OllamaProvider implements AIProvider {
 
       const data = await response.json();
       const content = data.message?.content || '';
-
-      try {
-        const parsed = JSON.parse(content);
-        return {
-          text: parsed.text || content,
-          emotion: parsed.emotion || 'neutral',
-          speak: parsed.speak ?? true,
-        };
-      } catch {
-        return { text: content, emotion: 'neutral', speak: true };
-      }
+      return parseAIResponse(content);
     } catch (error) {
       return { text: 'Desculpa, não consegui conectar ao Ollama.', emotion: 'confused', speak: false };
     }
