@@ -1,11 +1,41 @@
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 const API_KEY_PREFIX = 'petunia_api_';
+
+function isWeb(): boolean {
+  return Platform.OS === 'web';
+}
+
+async function secureGetItem(key: string): Promise<string | null> {
+  if (isWeb()) {
+    return localStorage.getItem(key);
+  }
+  const SecureStore = require('expo-secure-store');
+  return SecureStore.getItemAsync(key);
+}
+
+async function secureSetItem(key: string, value: string): Promise<void> {
+  if (isWeb()) {
+    localStorage.setItem(key, value);
+    return;
+  }
+  const SecureStore = require('expo-secure-store');
+  await SecureStore.setItemAsync(key, value);
+}
+
+async function secureDeleteItem(key: string): Promise<void> {
+  if (isWeb()) {
+    localStorage.removeItem(key);
+    return;
+  }
+  const SecureStore = require('expo-secure-store');
+  await SecureStore.deleteItemAsync(key);
+}
 
 export const SecureStorage = {
   async setApiKey(provider: string, key: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync(`${API_KEY_PREFIX}${provider}`, key);
+      await secureSetItem(`${API_KEY_PREFIX}${provider}`, key);
     } catch (error) {
       console.error('Failed to save API key:', error);
     }
@@ -13,7 +43,7 @@ export const SecureStorage = {
 
   async getApiKey(provider: string): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(`${API_KEY_PREFIX}${provider}`);
+      return await secureGetItem(`${API_KEY_PREFIX}${provider}`);
     } catch (error) {
       console.error('Failed to retrieve API key:', error);
       return null;
@@ -22,7 +52,7 @@ export const SecureStorage = {
 
   async removeApiKey(provider: string): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(`${API_KEY_PREFIX}${provider}`);
+      await secureDeleteItem(`${API_KEY_PREFIX}${provider}`);
     } catch (error) {
       console.error('Failed to remove API key:', error);
     }
@@ -32,7 +62,7 @@ export const SecureStorage = {
     try {
       const providers = ['openai', 'anthropic', 'google', 'ollama'];
       for (const provider of providers) {
-        await SecureStore.deleteItemAsync(`${API_KEY_PREFIX}${provider}`);
+        await secureDeleteItem(`${API_KEY_PREFIX}${provider}`);
       }
     } catch (error) {
       console.error('Failed to clear API keys:', error);
