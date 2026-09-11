@@ -2,7 +2,11 @@ services:
   - type: static_site
     name: petunia
     runtime: static
-    buildCommand: npm install && npx expo export --platform web
+    buildCommand: |
+      echo "EXPO_PUBLIC_AI_PROVIDER=$EXPO_PUBLIC_AI_PROVIDER" > .env
+      echo "EXPO_PUBLIC_AI_API_KEY=$EXPO_PUBLIC_AI_API_KEY" >> .env
+      echo "EXPO_PUBLIC_AI_MODEL=$EXPO_PUBLIC_AI_MODEL" >> .env
+      npm install && npx expo export --platform web
     staticPublishPath: dist
     routes:
       - type: rewrite
