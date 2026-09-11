@@ -1,16 +1,20 @@
 import { AIProvider, createAIProvider } from './provider';
 import { AIProviderType, AIResponse } from '../../types';
-import { useSettingsStore } from '../../stores/settingsStore';
+import { Config } from '../../config';
 
 class AIService {
+  private provider: AIProvider;
+
+  constructor() {
+    this.provider = createAIProvider(Config.ai.provider as AIProviderType);
+  }
+
   setProvider(type: AIProviderType) {
-    // Provider is now resolved per-request from the settings store
+    this.provider = createAIProvider(type);
   }
 
   async chat(messages: { role: string; content: string }[]): Promise<AIResponse> {
-    const providerType = useSettingsStore.getState().aiProvider || 'openai';
-    const provider = createAIProvider(providerType);
-    return provider.chat(messages);
+    return this.provider.chat(messages);
   }
 }
 
