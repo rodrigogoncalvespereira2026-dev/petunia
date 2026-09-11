@@ -1,133 +1,110 @@
-import React, { useState, useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, Text, Platform, View, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants';
+import { Spacing } from '../../constants';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+declare global {
+  interface Window {
+    MSStream?: unknown;
+  }
+}
+
 export function InstallButton() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isIOSStandalone = (window.navigator as any).standalone === true;
+    if (isStandalone || isIOSStandalone) {
+      setIsInstalled(true);
+      return;
+    }
+
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      deferredPrompt.current = e as BeforeInstallPromptEvent;
+      setCanInstall(true);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    window.addEventListener('appinstalled', () => {
+    const installedHandler = () => {
       setIsInstalled(true);
-    });
-
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
-    }
+      setCanInstall(false);
+    };
+    window.addEventListener('appinstalled', installedHandler);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installedHandler);
     };
   }, []);
 
-  const handleInstall = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      setDeferredPrompt(null);
+  const handlePress = async () => {
+    if (deferredPrompt.current) {
+      deferredPrompt.current.prompt();
+      const { outcome } = await deferredPrompt.current.userChoice;
+      deferredPrompt.current = null;
+      setCanInstall(outcome === 'accepted');
+      return;
+    }
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+    const isEdge = /Edg\//.test(navigator.userAgent);
+    const isChrome = /Chrome\//.test(navigator.userAgent) && !isEdge;
+
+    if (isAndroid && isChrome) {
+      Alert.alert(
+        'Instalar Petúnia',
+        'Toca nos 3 pontos do menu (canto superior direito) e depois em "Instalar app" ou "Adicionar ao ecrã principal".',
+        [{ text: 'OK' }]
+      );
+    } else if (isIOS) {
+      Alert.alert(
+        'Instalar Petúnia',
+        'Toca no botão partilhar (□↑) na barra inferior e depois em "Adicionar ao ecrã de início".',
+        [{ text: 'OK' }]
+      );
+    } else if (isEdge) {
+      Alert.alert(
+        'Instalar Petúnia',
+        'Clica nos 3 pontos do menu (canto superior direito) e seleciona "Aplicativos" → "Instalar este site como aplicativo".',
+        [{ text: 'OK' }]
+      );
     } else {
-      setShowModal(true);
+      Alert.alert(
+        'Instalar Petúnia',
+        'Procura o ícone de instalar na barra de endereço ou nos menus do browser.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
   if (Platform.OS !== 'web' || isInstalled) return null;
 
   return (
-    <>
-      <TouchableOpacity style={styles.iconButton} onPress={handleInstall}>
-        <Ionicons name="download-outline" size={20} color="#FFFFFF" />
-      </TouchableOpacity>
-
-      <Modal visible={showModal} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <View style={styles.modal}>
-            <Ionicons name="phone-portrait-outline" size={40} color={Colors.primary} />
-            <Text style={styles.modalTitle}>Instalar Petúnia</Text>
-            <Text style={styles.modalText}>
-              Para instalar como app no telemóvel:
-            </Text>
-            <Text style={styles.modalStep}>1. Toca no botão partilhar (□↑)</Text>
-            <Text style={styles.modalStep}>2. Seleciona "Adicionar ao ecrã principal"</Text>
-            <Text style={styles.modalStep}>3. Confirma com "Adicionar"</Text>
-            <Text style={[styles.modalText, { marginTop: 12 }]}>No computador:</Text>
-            <Text style={styles.modalStep}>1. Clica no ícone de instalar na barra de endereço</Text>
-            <Text style={styles.modalStep}>2. Ou usa os 3 pontos do menu → "Instalar Petúnia"</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={() => setShowModal(false)}>
-              <Text style={styles.closeButtonText}>Entendido</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </>
+    <TouchableOpacity style={styles.button} onPress={handlePress}>
+      <Ionicons
+        name={canInstall ? "download-outline" : "information-circle-outline"}
+        size={22}
+        color="#FFFFFF"
+      />
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  iconButton: {
+  button: {
     padding: Spacing.sm,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modal: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.xl,
-    margin: Spacing.lg,
-    alignItems: 'center',
-    maxWidth: 360,
-    width: '100%',
-  },
-  modalTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: '700',
-    color: Colors.text,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  modalText: {
-    fontSize: FontSizes.md,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: Spacing.xs,
-  },
-  modalStep: {
-    fontSize: FontSizes.sm,
-    color: Colors.text,
-    textAlign: 'left',
-    alignSelf: 'flex-start',
-    marginLeft: Spacing.lg,
-    marginVertical: 2,
-  },
-  closeButton: {
-    marginTop: Spacing.lg,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-  },
-  closeButtonText: {
-    color: '#FFFFFF',
-    fontSize: FontSizes.md,
-    fontWeight: '600',
   },
 });
