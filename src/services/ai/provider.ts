@@ -96,28 +96,28 @@ class GoogleProvider implements AIProvider {
 
   async chat(messages: { role: string; content: string }[]): Promise<AIResponse> {
     const apiKey = process.env.EXPO_PUBLIC_AI_API_KEY || '';
-    const model = process.env.EXPO_PUBLIC_AI_MODEL || 'gemini-2.0-flash';
+    const model = process.env.EXPO_PUBLIC_AI_MODEL || 'google/gemini-2.0-flash-001';
 
     const memoryContext = await MemoryService.getEnabledContext();
     const systemText = getSystemMessage(memoryContext);
 
-    const contents = messages.map((m) => ({
-      parts: [{ text: m.content }],
-      role: m.role === 'assistant' ? 'model' : 'user',
-    }));
-
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const response = await fetch(url, {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://petunia-1711.onrender.com',
+          'X-Title': 'Petúnia',
+        },
         body: JSON.stringify({
-          contents,
-          systemInstruction: { parts: [{ text: systemText }] },
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1000,
-          },
+          model,
+          messages: [
+            { role: 'system', content: systemText },
+            ...messages,
+          ],
+          temperature: 0.7,
+          max_tokens: 1000,
         }),
       });
 
@@ -128,7 +128,7 @@ class GoogleProvider implements AIProvider {
         return { text: `Erro da IA: ${errorMsg}`, emotion: 'confused', speak: true };
       }
 
-      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const content = data.choices?.[0]?.message?.content || '';
 
       try {
         const parsed = JSON.parse(content);
