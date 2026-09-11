@@ -95,7 +95,54 @@ class GoogleProvider implements AIProvider {
   name: AIProviderType = 'google';
 
   async chat(messages: { role: string; content: string }[]): Promise<AIResponse> {
-    return { text: 'Google provider ainda não implementado.', emotion: 'neutral', speak: false };
+    const apiKey = process.env.EXPO_PUBLIC_AI_API_KEY || '';
+    const model = process.env.EXPO_PUBLIC_AI_MODEL || 'gemini-2.0-flash';
+
+    const memoryContext = await MemoryService.getEnabledContext();
+    const systemText = getSystemMessage(memoryContext);
+
+    const contents = messages.map((m) => ({
+      parts: [{ text: m.content }],
+      role: m.role === 'assistant' ? 'model' : 'user',
+    }));
+
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: { parts: [{ text: systemText }] },
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1000,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = data.error?.message || `Erro ${response.status}`;
+        return { text: `Erro da IA: ${errorMsg}`, emotion: 'confused', speak: true };
+      }
+
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      try {
+        const parsed = JSON.parse(content);
+        return {
+          text: parsed.text || content,
+          emotion: parsed.emotion || 'neutral',
+          speak: parsed.speak ?? true,
+        };
+      } catch {
+        return { text: content, emotion: 'neutral', speak: true };
+      }
+    } catch (error) {
+      return { text: 'Desculpa, ocorreu um erro ao conectar com o Google Gemini.', emotion: 'confused', speak: true };
+    }
   }
 }
 
