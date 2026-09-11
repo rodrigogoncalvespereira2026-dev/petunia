@@ -1,5 +1,6 @@
 import { AIResponse, AIProviderType } from '../../types';
 import { MemoryService } from '../memory';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 export interface AIProvider {
   name: AIProviderType;
@@ -33,8 +34,9 @@ class OpenAIProvider implements AIProvider {
   name: AIProviderType = 'openai';
 
   async chat(messages: { role: string; content: string }[]): Promise<AIResponse> {
-    const apiKey = process.env.EXPO_PUBLIC_AI_API_KEY || '';
-    const model = process.env.EXPO_PUBLIC_AI_MODEL || 'gpt-4o-mini';
+    const { aiApiKey, aiModel } = useSettingsStore.getState();
+    const apiKey = aiApiKey || process.env.EXPO_PUBLIC_AI_API_KEY || '';
+    const model = aiModel || process.env.EXPO_PUBLIC_AI_MODEL || 'gpt-4o-mini';
     const baseUrl = process.env.EXPO_PUBLIC_AI_BASE_URL || 'https://api.openai.com/v1';
 
     const memoryContext = await MemoryService.getEnabledContext();
@@ -97,6 +99,7 @@ class OllamaProvider implements AIProvider {
   name: AIProviderType = 'ollama';
 
   async chat(messages: { role: string; content: string }[]): Promise<AIResponse> {
+    const { aiModel } = useSettingsStore.getState();
     const baseUrl = process.env.EXPO_PUBLIC_AI_BASE_URL || 'http://localhost:11434';
 
     const memoryContext = await MemoryService.getEnabledContext();
@@ -110,7 +113,7 @@ class OllamaProvider implements AIProvider {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: process.env.EXPO_PUBLIC_AI_MODEL || 'llama3',
+          model: aiModel || process.env.EXPO_PUBLIC_AI_MODEL || 'llama3',
           messages: [systemMessage, ...messages],
           stream: false,
         }),
