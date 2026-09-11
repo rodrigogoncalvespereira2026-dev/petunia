@@ -96,7 +96,7 @@ class GoogleProvider implements AIProvider {
 
   async chat(messages: { role: string; content: string }[]): Promise<AIResponse> {
     const apiKey = process.env.EXPO_PUBLIC_AI_API_KEY || '';
-    const model = process.env.EXPO_PUBLIC_AI_MODEL || 'google/gemini-2.0-flash-001';
+    const model = process.env.EXPO_PUBLIC_AI_MODEL || 'google/gemini-2.5-flash';
 
     const memoryContext = await MemoryService.getEnabledContext();
     const systemText = getSystemMessage(memoryContext);
