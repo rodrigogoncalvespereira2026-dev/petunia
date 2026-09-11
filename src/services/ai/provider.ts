@@ -59,6 +59,12 @@ class OpenAIProvider implements AIProvider {
       });
 
       const data = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = data.error?.message || `Erro ${response.status}`;
+        return { text: `Erro da IA: ${errorMsg}`, emotion: 'confused', speak: true };
+      }
+
       const content = data.choices?.[0]?.message?.content || '';
 
       try {
