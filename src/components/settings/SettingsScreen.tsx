@@ -1,40 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  TextInput,
   Switch,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { SecureStorage } from '../../utils/security';
-import { AIProviderType } from '../../types';
 import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants';
-
-const providers: { value: AIProviderType; label: string }[] = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'google', label: 'Google' },
-  { value: 'ollama', label: 'Ollama (Local)' },
-];
 
 const speeds = [0.75, 1, 1.25, 1.5, 2];
 
 export function SettingsScreen() {
-  const { settings, aiProvider, aiApiKey, aiModel, updateSettings, setAIProvider, setAIApiKey, setAIModel } =
+  const { settings, updateSettings } =
     useSettingsStore();
-
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [tempApiKey, setTempApiKey] = useState(aiApiKey);
-
-  const handleSaveApiKey = () => {
-    setAIApiKey(tempApiKey);
-    Alert.alert('Guardado', 'API key guardada com segurança.');
-  };
 
   const handleClearData = () => {
     Alert.alert('Limpar Dados', 'Isto vai apagar todas as memórias e configurações. Continuar?', [
@@ -54,55 +37,6 @@ export function SettingsScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Definições</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>AI Provider</Text>
-        
-        <View style={styles.providerGrid}>
-          {providers.map((p) => (
-            <TouchableOpacity
-              key={p.value}
-              style={[styles.providerButton, aiProvider === p.value && styles.providerActive]}
-              onPress={() => setAIProvider(p.value)}
-            >
-              <Text style={[styles.providerText, aiProvider === p.value && styles.providerTextActive]}>
-                {p.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={styles.label}>Modelo</Text>
-        <TextInput
-          style={styles.input}
-          value={aiModel}
-          onChangeText={setAIModel}
-          placeholder="gpt-4o-mini"
-          placeholderTextColor={Colors.textSecondary}
-        />
-
-        <Text style={styles.label}>API Key</Text>
-        <View style={styles.apiKeyContainer}>
-          <TextInput
-            style={[styles.input, styles.apiKeyInput]}
-            value={tempApiKey}
-            onChangeText={setTempApiKey}
-            placeholder="sk-..."
-            placeholderTextColor={Colors.textSecondary}
-            secureTextEntry={!showApiKey}
-          />
-          <TouchableOpacity onPress={() => setShowApiKey(!showApiKey)}>
-            <Ionicons
-              name={showApiKey ? 'eye-off' : 'eye'}
-              size={24}
-              color={Colors.textSecondary}
-            />
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSaveApiKey}>
-          <Text style={styles.saveButtonText}>Guardar API Key</Text>
-        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
@@ -205,62 +139,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
     marginBottom: Spacing.md,
-  },
-  label: {
-    fontSize: FontSizes.sm,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.md,
-  },
-  input: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    fontSize: FontSizes.md,
-    color: Colors.text,
-  },
-  providerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  providerButton: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
-  providerActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  providerText: {
-    fontSize: FontSizes.sm,
-    color: Colors.text,
-  },
-  providerTextActive: {
-    color: '#FFFFFF',
-  },
-  apiKeyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  apiKeyInput: {
-    flex: 1,
-  },
-  saveButton: {
-    backgroundColor: Colors.primary,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    marginTop: Spacing.md,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   settingRow: {
     flexDirection: 'row',
