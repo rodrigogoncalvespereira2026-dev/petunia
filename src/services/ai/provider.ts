@@ -34,7 +34,7 @@ class OpenAIProvider implements AIProvider {
 
   async chat(messages: { role: string; content: string }[]): Promise<AIResponse> {
     const apiKey = process.env.EXPO_PUBLIC_AI_API_KEY || '';
-    const model = process.env.EXPO_PUBLIC_AI_MODEL || 'gpt-5.4-MINI';
+    const model = process.env.EXPO_PUBLIC_AI_MODEL || 'gpt-5.4-mini';
     const baseUrl = process.env.EXPO_PUBLIC_AI_BASE_URL || 'https://api.openai.com/v1';
 
     const memoryContext = await MemoryService.getEnabledContext();
