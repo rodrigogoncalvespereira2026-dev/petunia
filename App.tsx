@@ -9,6 +9,7 @@ import { ToolsScreen } from './src/components/tools/ToolsScreen';
 import { FilesScreen } from './src/components/files/FilesScreen';
 import { AvatarScreen } from './src/components/avatar/AvatarScreen';
 import { SettingsScreen } from './src/components/settings/SettingsScreen';
+import { InstallButton } from './src/components/pwa/InstallButton';
 import { useChatStore } from './src/stores/chatStore';
 import { useSettingsStore } from './src/stores/settingsStore';
 import { Colors, Spacing, FontSizes } from './src/constants';
@@ -29,6 +30,7 @@ export default function App() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
+        <InstallButton />
         
         {currentScreen === 'chat' && <ChatScreen />}
         {currentScreen === 'avatar' && <AvatarScreen />}

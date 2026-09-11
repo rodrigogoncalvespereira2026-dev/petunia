@@ -23,7 +23,15 @@
       "package": "com.petunia.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Petúnia - A tua companheira virtual",
+      "shortName": "Petúnia",
+      "description": "IA companheira e assistente virtual",
+      "lang": "pt-PT",
+      "backgroundColor": "#E91E63",
+      "themeColor": "#E91E63",
+      "display": "standalone",
+      "orientation": "portrait"
     },
     "plugins": [
       "expo-secure-store"
