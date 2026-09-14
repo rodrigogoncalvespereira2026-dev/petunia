@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, Text, TouchableOpacity, Modal } from 'react-native';
+import { View, FlatList, StyleSheet, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useChatStore } from '../../stores/chatStore';
 import { ChatBubble } from './ChatBubble';
 import { ChatInput } from './ChatInput';
-import { VoiceMode } from '../voice/VoiceMode';
 import { aiService } from '../../services/ai';
 import { voiceService } from '../../services/voice';
 import { avatarService } from '../../services/avatar';
@@ -31,7 +30,6 @@ export function ChatScreen() {
   const { processMessage: processTool } = useToolCommands();
   const { settings } = useSettingsStore();
   const flatListRef = useRef<FlatList>(null);
-  const [showVoiceMode, setShowVoiceMode] = useState(false);
 
   useEffect(() => {
     if (!currentConversation) {
@@ -126,11 +124,6 @@ export function ChatScreen() {
     }
   };
 
-  const handleVoiceTranscription = (text: string) => {
-    setShowVoiceMode(false);
-    handleSend(text);
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -140,12 +133,6 @@ export function ChatScreen() {
         </View>
         <View style={styles.headerActions}>
           <InstallButton />
-          <TouchableOpacity
-            style={styles.voiceModeButton}
-            onPress={() => setShowVoiceMode(true)}
-          >
-            <Ionicons name="mic" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -178,13 +165,6 @@ export function ChatScreen() {
       )}
 
       <ChatInput onSend={handleSend} isLoading={isLoading} />
-
-      <Modal visible={showVoiceMode} animationType="slide" presentationStyle="fullScreen">
-        <VoiceMode
-          onTranscription={handleVoiceTranscription}
-          onClose={() => setShowVoiceMode(false)}
-        />
-      </Modal>
     </View>
   );
 }
@@ -217,9 +197,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-  },
-  voiceModeButton: {
-    padding: Spacing.sm,
   },
   messageList: {
     paddingVertical: Spacing.md,
