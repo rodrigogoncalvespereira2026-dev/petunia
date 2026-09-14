@@ -12,9 +12,12 @@ interface VoiceButtonProps {
 
 export function VoiceButton({ onTranscription, disabled }: VoiceButtonProps) {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+  const [sttAvailable, setSttAvailable] = useState(false);
   const scaleAnim = new Animated.Value(1);
 
   useEffect(() => {
+    setSttAvailable(voiceService.isSTTAvailable());
+    console.log('VoiceButton: STT available =', voiceService.isSTTAvailable());
     const unsubscribe = voiceService.onStateChange(setVoiceState);
     return unsubscribe;
   }, []);
@@ -43,23 +46,12 @@ export function VoiceButton({ onTranscription, disabled }: VoiceButtonProps) {
   const handlePress = async () => {
     if (disabled) return;
 
-    if (!voiceService.isSTTAvailable()) {
-      if (Platform.OS === 'web') {
-        const ua = navigator.userAgent;
-        if (/iPad|iPhone|iPod/.test(ua)) {
-          Alert.alert(
-            'Microfone indisponível',
-            'O Safari no iPhone não suporta reconhecimento de voz. Usa o Chrome ou Edge no telemóvel para usar o microfone.',
-            [{ text: 'OK' }]
-          );
-        } else {
-          Alert.alert(
-            'Microfone indisponível',
-            'O reconhecimento de voz não está disponível neste browser. Usa Chrome ou Edge.',
-            [{ text: 'OK' }]
-          );
-        }
-      }
+    if (!sttAvailable) {
+      Alert.alert(
+        'Microfone indisponível',
+        'O reconhecimento de voz não está disponível. Verifica se estás a usar Chrome ou Edge e se autorizaste o microfone.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
@@ -70,38 +62,32 @@ export function VoiceButton({ onTranscription, disabled }: VoiceButtonProps) {
         const text = await voiceService.stopListening();
         if (text.trim()) {
           onTranscription(text);
+        } else {
+          Alert.alert('Não ouvi nada', 'Tenta falar mais alto ou mais perto do microfone.', [{ text: 'OK' }]);
         }
       }
     } catch (error: any) {
       console.error('Voice error:', error);
-      Alert.alert('Erro', error.message || 'Erro ao usar o microfone.', [{ text: 'OK' }]);
+      Alert.alert('Erro no microfone', error.message || 'Erro ao usar o microfone.', [{ text: 'OK' }]);
       setVoiceState('idle');
     }
   };
 
   const getIconName = () => {
     switch (voiceState) {
-      case 'listening':
-        return 'mic';
-      case 'processing':
-        return 'hourglass-outline';
-      case 'speaking':
-        return 'volume-high';
-      default:
-        return 'mic-outline';
+      case 'listening': return 'mic';
+      case 'processing': return 'hourglass-outline';
+      case 'speaking': return 'volume-high';
+      default: return 'mic-outline';
     }
   };
 
   const getButtonColor = () => {
     switch (voiceState) {
-      case 'listening':
-        return Colors.error;
-      case 'processing':
-        return Colors.warning;
-      case 'speaking':
-        return Colors.success;
-      default:
-        return Colors.primary;
+      case 'listening': return Colors.error;
+      case 'processing': return Colors.warning;
+      case 'speaking': return Colors.success;
+      default: return Colors.primary;
     }
   };
 
@@ -111,7 +97,7 @@ export function VoiceButton({ onTranscription, disabled }: VoiceButtonProps) {
         style={[
           styles.button,
           { backgroundColor: getButtonColor() },
-          disabled && styles.disabled,
+          (disabled || !sttAvailable) && styles.disabled,
         ]}
         onPress={handlePress}
         disabled={disabled}

@@ -4,55 +4,66 @@ export class WebSpeechSTT implements STTProvider {
   name = 'web-speech';
   private recognition: any = null;
   private resolveResult: ((text: string) => void) | null = null;
-  private rejectError: ((err: Error) => void) | null = null;
 
   constructor() {
     if (typeof window === 'undefined') return;
 
-    const SpeechRecognitionAPI =
+    const API =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
 
-    if (!SpeechRecognitionAPI) return;
+    if (!API) {
+      console.warn('SpeechRecognition API not found');
+      return;
+    }
 
-    this.recognition = new SpeechRecognitionAPI();
-    this.recognition.continuous = false;
-    this.recognition.interimResults = false;
-    this.recognition.lang = 'pt-PT';
-    this.recognition.maxAlternatives = 1;
+    try {
+      this.recognition = new API();
+      this.recognition.continuous = false;
+      this.recognition.interimResults = false;
+      this.recognition.lang = 'pt-PT';
+      this.recognition.maxAlternatives = 1;
 
-    this.recognition.onresult = (event: any) => {
-      const transcript = event.results[0]?.[0]?.transcript || '';
-      this.resolveResult?.(transcript);
-    };
+      this.recognition.onresult = (event: any) => {
+        const transcript = event.results[0]?.[0]?.transcript || '';
+        console.log('STT result:', transcript);
+        this.resolveResult?.(transcript);
+      };
 
-    this.recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      if (event.error === 'not-allowed') {
-        this.rejectError?.(new Error('Permissão de microfone negada. Autoriza o microfone nas definições do browser.'));
-      } else if (event.error === 'no-speech') {
-        this.resolveResult?.('');
-      } else {
-        this.rejectError?.(new Error(`Erro de reconhecimento: ${event.error}`));
-      }
-    };
+      this.recognition.onerror = (event: any) => {
+        console.error('STT error:', event.error);
+        if (event.error === 'no-speech') {
+          this.resolveResult?.('');
+        } else {
+          this.resolveResult?.('');
+        }
+      };
 
-    this.recognition.onend = () => {
-      // Recognition ended
-    };
+      this.recognition.onend = () => {
+        console.log('STT ended');
+      };
+
+      console.log('STT initialized OK');
+    } catch (e) {
+      console.error('STT init failed:', e);
+      this.recognition = null;
+    }
   }
 
   async startListening(): Promise<void> {
     if (!this.recognition) {
-      throw new Error('Reconhecimento de voz não disponível neste browser.');
+      throw new Error('Speech recognition not available');
     }
     return new Promise((resolve, reject) => {
-      this.rejectError = reject;
-      this.recognition.onstart = () => resolve();
+      this.recognition.onstart = () => {
+        console.log('STT started');
+        resolve();
+      };
       try {
         this.recognition.start();
       } catch (e) {
-        reject(new Error('Não foi possível iniciar o reconhecimento de voz.'));
+        console.error('STT start failed:', e);
+        reject(new Error('Could not start speech recognition.'));
       }
     });
   }
@@ -62,10 +73,6 @@ export class WebSpeechSTT implements STTProvider {
     return new Promise((resolve) => {
       this.resolveResult = (text) => {
         resolve(text);
-        try { this.recognition.stop(); } catch {}
-      };
-      this.rejectError = (err) => {
-        resolve('');
         try { this.recognition.stop(); } catch {}
       };
       try {
@@ -83,18 +90,11 @@ export class WebSpeechSTT implements STTProvider {
 
 export class MobileSTT implements STTProvider {
   name = 'mobile-stt';
-
   async startListening(): Promise<void> {
     throw new Error('Speech recognition not available on this device.');
   }
-
-  async stopListening(): Promise<string> {
-    return '';
-  }
-
-  isAvailable(): boolean {
-    return false;
-  }
+  async stopListening(): Promise<string> { return ''; }
+  isAvailable(): boolean { return false; }
 }
 
 export function createSTTProvider(): STTProvider {
@@ -103,8 +103,10 @@ export function createSTTProvider(): STTProvider {
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
     if (API) {
+      console.log('Using WebSpeechSTT');
       return new WebSpeechSTT();
     }
   }
+  console.log('Using MobileSTT (no API found)');
   return new MobileSTT();
 }
