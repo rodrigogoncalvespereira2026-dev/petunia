@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { TouchableOpacity, StyleSheet, Animated, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { voiceService } from '../../services/voice';
 import { VoiceState } from '../../types/voice';
@@ -41,7 +41,27 @@ export function VoiceButton({ onTranscription, disabled }: VoiceButtonProps) {
   }, [voiceState]);
 
   const handlePress = async () => {
-    if (disabled || !voiceService.isSTTAvailable()) return;
+    if (disabled) return;
+
+    if (!voiceService.isSTTAvailable()) {
+      if (Platform.OS === 'web') {
+        const ua = navigator.userAgent;
+        if (/iPad|iPhone|iPod/.test(ua)) {
+          Alert.alert(
+            'Microfone indisponível',
+            'O Safari no iPhone não suporta reconhecimento de voz. Usa o Chrome ou Edge no telemóvel para usar o microfone.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert(
+            'Microfone indisponível',
+            'O reconhecimento de voz não está disponível neste browser. Usa Chrome ou Edge.',
+            [{ text: 'OK' }]
+          );
+        }
+      }
+      return;
+    }
 
     try {
       if (voiceState === 'idle') {
@@ -52,8 +72,9 @@ export function VoiceButton({ onTranscription, disabled }: VoiceButtonProps) {
           onTranscription(text);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Voice error:', error);
+      Alert.alert('Erro', error.message || 'Erro ao usar o microfone.', [{ text: 'OK' }]);
       setVoiceState('idle');
     }
   };
