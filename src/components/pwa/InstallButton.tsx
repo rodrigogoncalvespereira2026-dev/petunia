@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, Platform, Alert, Modal, View, Text } from 'react-native';
+import { TouchableOpacity, StyleSheet, Platform, Modal, View, Text, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants';
 
@@ -8,30 +8,25 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-function isIOS() {
-  if (Platform.OS === 'ios') return true;
-  if (typeof navigator !== 'undefined') {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function getPlatform(): 'ios' | 'android' | 'edge' | 'chrome' | 'other' {
+  if (Platform.OS !== 'web') return 'other';
+  const ua = navigator.userAgent;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+
+  if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+    return isStandalone ? 'other' : 'ios';
   }
-  return false;
-}
-
-function isAndroid() {
-  return typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent);
-}
-
-function isEdge() {
-  return typeof navigator !== 'undefined' && /Edg\//.test(navigator.userAgent);
-}
-
-function isChrome() {
-  return typeof navigator !== 'undefined' && /Chrome\//.test(navigator.userAgent) && !isEdge();
+  if (/Android/.test(ua)) return 'android';
+  if (/Edg\//.test(ua)) return 'edge';
+  if (/Chrome\//.test(ua)) return 'chrome';
+  return 'other';
 }
 
 export function InstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const platform = getPlatform();
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -59,17 +54,29 @@ export function InstallButton() {
       try {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-          setIsInstalled(true);
-        }
+        if (outcome === 'accepted') setIsInstalled(true);
         setDeferredPrompt(null);
         return;
       } catch {}
     }
+
+    if (platform === 'ios') {
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Petúnia',
+            text: 'Instala a Petúnia no teu iPhone!',
+            url: window.location.href,
+          });
+          return;
+        } catch {}
+      }
+    }
+
     setShowModal(true);
   };
 
-  if (Platform.OS !== 'web' || isInstalled) return null;
+  if (Platform.OS !== 'web' || isInstalled || platform === 'other') return null;
 
   return (
     <>
@@ -80,7 +87,9 @@ export function InstallButton() {
       <Modal visible={showModal} transparent animationType="fade" onRequestClose={() => setShowModal(false)}>
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowModal(false)}>
           <TouchableOpacity activeOpacity={1} style={styles.modal}>
-            {isIOS() ? <IOSSteps /> : isAndroid() ? <AndroidSteps /> : <DesktopSteps />}
+            {platform === 'ios' && <IOSSteps />}
+            {platform === 'android' && <AndroidSteps />}
+            {(platform === 'edge' || platform === 'chrome') && <DesktopSteps platform={platform} />}
 
             <TouchableOpacity style={styles.closeBtn} onPress={() => setShowModal(false)}>
               <Text style={styles.closeBtnText}>Fechar</Text>
@@ -92,38 +101,52 @@ export function InstallButton() {
   );
 }
 
+function StepItem({ num, title, hint }: { num: number; title: string; hint?: string }) {
+  return (
+    <View style={styles.step}>
+      <View style={styles.stepNumber}>
+        <Text style={styles.stepNumberText}>{num}</Text>
+      </View>
+      <View style={styles.stepContent}>
+        <Text style={styles.stepText}>{title}</Text>
+        {hint ? <Text style={styles.stepHint}>{hint}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
 function IOSSteps() {
   return (
     <View style={styles.stepsContainer}>
-      <Ionicons name="phone-portrait-outline" size={48} color={Colors.primary} />
+      <View style={styles.iconCircle}>
+        <Ionicons name="logo-apple" size={40} color={Colors.primary} />
+      </View>
       <Text style={styles.modalTitle}>Instalar no iPhone</Text>
+      <Text style={styles.modalSubtitle}>Usa o Safari para instalar a Petúnia</Text>
 
-      <View style={styles.step}>
-        <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepText}>Toca no botão <Text style={styles.bold}>Partilhar</Text></Text>
-          <Text style={styles.stepHint}>Ícone □↑ na barra inferior do Safari</Text>
+      <View style={styles.iosVisual}>
+        <View style={styles.iosBar}>
+          <View style={styles.iosBarLeft}>
+            <Ionicons name="lock-closed" size={12} color="#666" />
+            <Text style={styles.iosUrl}>petunia-1711.onrender.com</Text>
+          </View>
+          <View style={styles.iosBarRight}>
+            <Ionicons name="share-outline" size={20} color={Colors.primary} />
+          </View>
+        </View>
+        <View style={styles.arrowPointer}>
+          <Ionicons name="arrow-down" size={24} color={Colors.primary} />
+          <Text style={styles.arrowLabel}>Toca aqui</Text>
         </View>
       </View>
 
-      <View style={styles.step}>
-        <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepText}>Desliza para baixo e toca em <Text style={styles.bold}>"Adicionar ao Ecrã de Início"</Text></Text>
-        </View>
-      </View>
-
-      <View style={styles.step}>
-        <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepText}>Toca em <Text style={styles.bold}>"Adicionar"</Text></Text>
-          <Text style={styles.stepHint}>No canto superior direito</Text>
-        </View>
-      </View>
+      <StepItem num={1} title='Toca no botão "Partilhar"' hint="Ícone □↑ na barra inferior" />
+      <StepItem num={2} title='Desliza e toca em "Adicionar ao Ecrã de Início"' />
+      <StepItem num={3} title='Toca em "Adicionar"' hint="Canto superior direito" />
 
       <View style={styles.tipBox}>
-        <Ionicons name="information-circle" size={18} color={Colors.primary} />
-        <Text style={styles.tipText}>A Petúnia vai aparecer no teu ecrã inicial como uma app!</Text>
+        <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+        <Text style={styles.tipText}>Depois vai aparecer no ecrã inicial como uma app!</Text>
       </View>
     </View>
   );
@@ -132,86 +155,37 @@ function IOSSteps() {
 function AndroidSteps() {
   return (
     <View style={styles.stepsContainer}>
-      <Ionicons name="phone-portrait-outline" size={48} color={Colors.primary} />
+      <View style={styles.iconCircle}>
+        <Ionicons name="logo-android" size={40} color="#3DDC84" />
+      </View>
       <Text style={styles.modalTitle}>Instalar no Android</Text>
 
-      <View style={styles.step}>
-        <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepText}>Toca nos <Text style={styles.bold}>3 pontos ⋮</Text></Text>
-          <Text style={styles.stepHint}>Canto superior direito do ecrã</Text>
-        </View>
-      </View>
-
-      <View style={styles.step}>
-        <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepText}>Toca em <Text style={styles.bold}>"Instalar app"</Text> ou <Text style={styles.bold}>"Adicionar ao ecrã principal"</Text></Text>
-        </View>
-      </View>
-
-      <View style={styles.step}>
-        <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepText}>Confirma com <Text style={styles.bold}>"Instalar"</Text></Text>
-        </View>
-      </View>
+      <StepItem num={1} title="Toca nos 3 pontos ⋮" hint="Canto superior direito" />
+      <StepItem num={2} title='Toca em "Instalar app" ou "Adicionar ao ecrã principal"' />
+      <StepItem num={3} title='Confirma com "Instalar"' />
     </View>
   );
 }
 
-function DesktopSteps() {
-  const browserName = isEdge() ? 'Edge' : isChrome() ? 'Chrome' : 'teu browser';
-
+function DesktopSteps({ platform }: { platform: string }) {
   return (
     <View style={styles.stepsContainer}>
-      <Ionicons name="laptop-outline" size={48} color={Colors.primary} />
+      <View style={styles.iconCircle}>
+        <Ionicons name="laptop-outline" size={40} color={Colors.primary} />
+      </View>
       <Text style={styles.modalTitle}>Instalar no computador</Text>
 
-      {isEdge() ? (
+      {platform === 'edge' ? (
         <>
-          <View style={styles.step}>
-            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepText}>Clica nos <Text style={styles.bold}>3 pontos ⋮</Text></Text>
-              <Text style={styles.stepHint}>Canto superior direito do Edge</Text>
-            </View>
-          </View>
-          <View style={styles.step}>
-            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepText}>Vai a <Text style={styles.bold}>"Aplicativos"</Text></Text>
-            </View>
-          </View>
-          <View style={styles.step}>
-            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepText}>Clica em <Text style={styles.bold}>"Instalar este site como aplicativo"</Text></Text>
-            </View>
-          </View>
-        </>
-      ) : isChrome() ? (
-        <>
-          <View style={styles.step}>
-            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepText}>Clica no ícone <Text style={styles.bold}>installer ↥</Text></Text>
-              <Text style={styles.stepHint}>Na barra de endereço, ao lado do URL</Text>
-            </View>
-          </View>
-          <View style={styles.step}>
-            <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepText}>Ou vai a <Text style={styles.bold}>⋮ → Instalar Petúnia</Text></Text>
-            </View>
-          </View>
+          <StepItem num={1} title="Clica nos 3 pontos ⋮" hint="Canto superior direito do Edge" />
+          <StepItem num={2} title='Vai a "Aplicativos"' />
+          <StepItem num={3} title='Clica em "Instalar este site como aplicativo"' />
         </>
       ) : (
-        <View style={styles.step}>
-          <View style={styles.stepContent}>
-            <Text style={styles.stepText}>Procura o ícone de instalar na barra de endereço ou no menu de {browserName}.</Text>
-          </View>
-        </View>
+        <>
+          <StepItem num={1} title="Clica no ícone ↥ na barra de endereço" />
+          <StepItem num={2} title='Ou vai a ⋮ → "Instalar Petúnia"' />
+        </>
       )}
     </View>
   );
@@ -234,17 +208,66 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: 40,
     paddingHorizontal: Spacing.lg,
-    maxHeight: '80%',
+    maxHeight: '85%',
   },
   stepsContainer: {
     alignItems: 'center',
   },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#F3E8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
   modalTitle: {
-    fontSize: FontSizes.lg,
+    fontSize: FontSizes.xl,
     fontWeight: '700',
     color: Colors.text,
-    marginTop: Spacing.md,
+    marginBottom: Spacing.xs,
+  },
+  modalSubtitle: {
+    fontSize: FontSizes.sm,
+    color: Colors.textSecondary,
     marginBottom: Spacing.lg,
+  },
+  iosVisual: {
+    width: '100%',
+    marginBottom: Spacing.lg,
+  },
+  iosBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  iosBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  iosUrl: {
+    fontSize: 13,
+    color: '#333',
+  },
+  iosBarRight: {
+    padding: 4,
+  },
+  arrowPointer: {
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  arrowLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primary,
   },
   step: {
     flexDirection: 'row',
@@ -280,13 +303,10 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 2,
   },
-  bold: {
-    fontWeight: '700',
-  },
   tipBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#E8F5E9',
     padding: Spacing.md,
     borderRadius: BorderRadius.sm,
     marginTop: Spacing.sm,
@@ -295,7 +315,7 @@ const styles = StyleSheet.create({
   tipText: {
     flex: 1,
     fontSize: FontSizes.sm,
-    color: Colors.textSecondary,
+    color: '#2E7D32',
     lineHeight: 18,
   },
   closeBtn: {
